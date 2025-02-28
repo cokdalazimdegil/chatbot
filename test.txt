@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSM Bilişim Chatbot</title>
+    <style>
+        /* Genel Stil */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        /* Chatbot Simgesi */
+        #chatbot-icon {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        #chatbot-icon img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        #chatbot-icon:hover img {
+            transform: scale(1.15) rotate(10deg);
+        }
+
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background-color: #ff0000;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            animation: bounce 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 111, 0, 0.4);
+            }
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(255, 111, 0, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 111, 0, 0);
+            }
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-5px); }
+        }
+
+        /* Chatbot Konteyneri */
+        #chatbot-container {
+            position: fixed;
+            left: 20px;
+            bottom: 90px;
+            width: 380px;
+            height: 550px;
+            background-color: #fff;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0);
+            transform-origin: bottom left;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-in-out;
+            opacity: 0;
+            z-index: 999;
+        }
+
+        #chatbot-container.active {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Chatbot Başlık */
+        #chatbot-header {
+            background: linear-gradient(135deg, #FF6F00, #FF9800);
+            color: #fff;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+        }
+
+        .chatbot-title {
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        .online-indicator {
+            width: 10px;
+            height: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            margin-right: 8px;
+            position: relative;
+        }
+
+        .online-indicator::after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            animation: pingPulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pingPulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        #header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-button {
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: white;
+            transition: background 0.2s ease-in-out;
+        }
+
+        .header-button:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Mesajlar Alanı */
+        #chatbot-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            scroll-behavior: smooth;
+            background-image: url('https://www.transparenttextures.com/patterns/subtle-dots.png');
+        }
+
+        #chatbot-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chatbot-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #chatbot-messages::-webkit-scrollbar-thumb {
+            background: #FF9800;
+            border-radius: 3px;
+        }
+
+        /* Mesaj Stilleri */
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 75%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            line-height: 1.4;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #FF9800, #FF6F00);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-content {
+            background-color: #fff;
+            color: #333;
+            margin-left: 40px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.bot .message-content::before {
+            content: "";
+            position: absolute;
+            left: -35px;
+            top: 0;
+            width: 30px;
+            height: 30px;
+            background-image: url('https://static.ticimax.cloud/64861//uploads/bankalogo/osmbilisim.jpg');
+            background-size: cover;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .message-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        /* Ürün Kartı */
+        .product-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 120px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .product-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .product-price {
+            color: #FF6F00;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .product-action {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .view-button {
+            padding: 8px 12px;
+            background-color: #FF6F00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .view-button:hover {
+            background-color: #E65100;
+        }
+
+        /* Yazma Animasyonu */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #bbb;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: typingBounce 1.4s infinite;
+            opacity: 0.6;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-6px); }
+        }
+
+        /* Giriş Alanı */
+        #chatbot-input {
+            display: flex;
+            padding: 15px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            position: relative;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 45px 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        #user-input:focus {
+            border-color: #FF9800;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.2);
+        }
+
+        #send-button {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 35px;
+            height: 35px;
+            background-color: #FF6F00;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        #send-button:hover {
+            background-color: #E65100;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Ekstra Fonksiyonlar Alanı */
+        #extra-functions {
+            display: flex;
+            gap: 10px;
+            padding: 0 15px 15px;
+            background-color: #fff;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        #extra-functions::-webkit-scrollbar {
+            display: none;
+        }
+
+        .function-button {
+            padding: 8px 15px;
+            background-color: #f1f1f1;
+            color: #333;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease-in-out;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .function-button:hover {
+            background-color: #FF9800;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .function-icon {
+            font-size: 14px;
+        }
+
+        /* Kargo Takip Input Alanı */
+        #tracking-input {
+            display: none;
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            animation: slideDown 0.3s ease-in-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #tracking-input input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+            font-size: 14px;
+            margin-bottom: 10px;
+            transition: border-color 0.3s;
+        }
+
+        #tracking-input input:focus {
+            border-color: #FF9800;
+        }
+
+        #tracking-input button {
+            padding: 10px 15px;
+            background-color: #FF6F00;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.2s;
+            width: 100%;
+        }
+
+        #tracking-input button:hover {
+            background-color: #E65100;
+            transform: translateY(-2px);
+        }
+
+        /* Kategoriler, Arama ve Ürün Görünümü */
+        #categories-view, #search-view, #product-view {
+            display: none;
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            max-height: 300px;
+            overflow-y: auto;
+            animation: slideDown 0.3s ease-in-out;
+        }
+
+        .category-list, .search-results, .product-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .category-item, .search-item {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-align: center;
+        }
+
+        .category-item:hover, .search-item:hover {
+            background-color: #FF9800;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Geri Bildirim */
+        #feedback-container {
+            display: none;
+            padding: 15px;
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            animation: slideDown 0.3s ease-in-out;
+        }
+
+        .rating-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 10px;
+        }
+
+        .rating-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .rating-button:hover {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+
+        .rating-button.selected {
+            opacity: 1;
+        }
+
+        #feedback-text {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            resize: none;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+
+        #submit-feedback {
+            background-color: #FF6F00;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #submit-feedback:hover {
+            background-color: #E65100;
+        }
+
+        /* Özel Mesaj Tasarımı ve İçerik Biçimlendirme */
+        .message.bot .message-content ul {
+            padding-left: 20px;
+            margin: 5px 0;
+        }
+
+        .message.bot .message-content ul li {
+            margin-bottom: 5px;
+        }
+
+        .message-content a {
+            color: #FF6F00;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+
+        /* Kaydırma Göstergesi */
+        #scroll-indicator {
+            position: absolute;
+            bottom: 80px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 111, 0, 0.8);
+            border-radius: 50%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            animation: bounce 1s infinite alternate;
+            z-index: 5;
+        }
+
+        /* Ürün Çeşitleri Carousel */
+        .product-carousel {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            margin: 10px 0;
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .product-carousel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .carousel-item {
+            scroll-snap-align: start;
+            flex: 0 0 auto;
+            width: 150px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .carousel-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .carousel-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: contain;
+        }
+
+        .carousel-item .item-details {
+            padding: 8px;
+        }
+
+        .carousel-item .item-title {
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .carousel-item .item-price {
+            color: #FF6F00;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        /* Loading animasyonu */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 111, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #FF6F00;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Üst Çıkan */
+        #suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .suggestion-chip {
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        /* Yükleniyor Overlay */
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10;
+            display: none;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #FF9800;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: loader-rotate 1s linear infinite;
+        }
+
+        @keyframes loader-rotate {
+            0% { transform: rotate(0); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #loading-text {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #FF6F00;
+        }
+
+        /* Küçük Ekranlarda Responsive Tasarım */
+        @media (max-width: 480px) {
+            #chatbot-container {
+                left: 10px;
+                right: 10px;
+                width: calc(100% - 20px);
+                bottom: 80px;
+            }
+            
+            .product-carousel {
+                gap: 5px;
+            }
+            
+            .carousel-item {
+                width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Chatbot Simgesi -->
+    <div id="chatbot-icon" onclick="toggleChatbot()">
+        <img src="https://static.ticimax.cloud/64861//uploads/bankalogo/osmbilisim.jpg" alt="Chatbot Icon">
+        <div class="notification-badge">1</div>
+    </div>
+
+    <!-- Chatbot Konteyneri -->
+    <div id="chatbot-container">
+        <!-- Yükleniyor Overlay -->
+        <div id="loading-overlay">
+            <div class="loader"></div>
+            <div id="loading-text">Yükleniyor...</div>
+        </div>
+
+        <!-- Chatbot Başlık -->
+        <div id="chatbot-header">
+            <div class="chatbot-title">
+                <div class="online-indicator"></div>
+                OSM Bilişim Destek
+            </div>
+            <div id="header-buttons">
+                <button class="header-button" onclick="toggleFeedback()" title="Geribildirim">⭐</button>
+                <button class="header-button" onclick="toggleChatbot()" title="Kapat">✕</button>
+            </div>
+        </div>
+
+        <!-- Mesajlar Alanı -->
+        <div id="chatbot-messages">
+            <div class="message bot">
+                <div class="message-content">
+                    Merhaba! OSM Bilişim'e hoş geldiniz. Size nasıl yardımcı olabilirim?
+                    <div id="suggestion-chips">
+                        <div class="suggestion-chip" onclick="sendMessage('telefon önerisi')">Telefon önerisi</div>
+                        <div class="suggestion-chip" onclick="sendMessage('kampanyalar')">Kampanyalar</div>
+                        <div class="suggestion-chip" onclick="sendMessage('yenilenmiş telefon nedir')">Yenilenmiş telefon nedir?</div>
+                    </div>
+                    <div class="message-time">14:30</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kargo Takip Input Alanı -->
+        <div id="tracking-input">
+            <input type="text" id="tracking-number" placeholder="Kargo takip numaranızı girin...">
+            <button onclick="trackPackage()">Takip Et</button>
+        </div>
+
+        <!-- Kategoriler Görünümü -->
+        <div id="categories-view">
+            <h3>Kategoriler</h3>
+            <div class="category-list" id="category-list">
+                <!-- Kategoriler buraya gelecek -->
+            </div>
+        </div>
+
+        <!-- Arama Görünümü -->
+        <div id="search-view">
+            <h3>Arama Sonuçları</h3>
+            <div class="search-results" id="search-results">
+                <!-- Arama sonuçları buraya gelecek -->
+            </div>
+        </div>
+
+        <!-- Ürün Detay Görünümü -->
+        <div id="product-view">
+            <div class="product-details" id="product-details">
+                <!-- Ürün detayları buraya gelecek -->
+            </div>
+        </div>
+
+        <!-- Geri Bildirim Formu -->
+        <div id="feedback-container">
+            <h3>Deneyiminizi değerlendirin</h3>
+            <div class="rating-buttons">
+                <button class="rating-button" onclick="selectRating(1)">😞</button>
+                <button class="rating-button" onclick="selectRating(2)">😐</button>
+                <button class="rating-button" onclick="selectRating(3)">🙂</button>
+                <button class="rating-button" onclick="selectRating(4)">😀</button>
+                <button class="rating-button" onclick="selectRating(5)">😍</button>
+            </div>
+            <textarea id="feedback-text" placeholder="Geribildiriminizi buraya yazın (isteğe bağlı)..."></textarea>
+            <button id="submit-feedback" onclick="submitFeedback()">Gönder</button>
+        </div>
+
+        <!-- Giriş Alanı -->
+        <div id="chatbot-input">
+            <input type="text" id="user-input" placeholder="Mesajınızı yazın...">
+            <button id="send-button" onclick="sendUserMessage()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Ekstra Fonksiyonlar -->
+        <div id="extra-functions">
+            <button class="function-button" onclick="showCategories()">
+                <span class="function-icon">📁</span> Kategoriler
+            </button>
+            <button class="function-button" onclick="searchProducts()">
+                <span class="function-icon">🔍</span> Ürün Ara
+            </button>
+            <button class="function-button" onclick="showHelp()">
+                <span class="function-icon">❓</span> Yardım
+            </button>
+            <button class="function-button" onclick="showTrackingInput()">
+                <span class="function-icon">📦</span> Kargo Takip
+            </button>
+            <button class="function-button" onclick="showPromos()">
+                <span class="function-icon">🎁</span> Kampanyalar
+            </button>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div id="scroll-indicator" onclick="scrollToBottom()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        // Chatbot Yanıtları
+        const botResponses = {
+            "merhaba": "Merhaba! OSM Bilişim'e hoş geldiniz. Size nasıl yardımcı olabilirim?",
+            "selam": "Selam! Yenilenmiş telefonların adresi OSM Bilişim'desiniz. Size nasıl yardımcı olabilirim?",
+            "naber": "İyiyim, teşekkür ederim! Size nasıl yardımcı olabilirim?",
+            "nasılsın": "Teşekkürler, ben iyiyim! Size nasıl yardımcı olabilirim?",
+            "telefon önerisi": "Hangi marka veya özelliklerde bir yenilenmiş telefon arıyorsunuz? Bütçe aralığınızı da belirtirseniz, size en uygun seçenekleri sunabilirim.",
+            "yenilenmiş telefon nedir": "Yenilenmiş telefonlar, önceki kullanıcılarından alınarak uzman teknisyenler tarafından detaylı test ve bakımlardan geçirilen, gerekli parça değişimleri yapılarak yeni gibi çalışan ve garantili olarak satışa sunulan cihazlardır.",
+            "yenilenmiş telefon güvenilir mi": "Evet, yenilenmiş telefonlarımız titiz bir yenileme sürecinden geçer ve %100 çalışır durumda, garantili olarak size sunulur. Kalite ve müşteri memnuniyeti bizim için ön plandadır.",
+            "hangi markalar var": "OSM Bilişim olarak Apple, Samsung, Xiaomi, Huawei ve Oppo gibi popüler markaların yenilenmiş telefonlarını sunmaktayız.",
+            "garanti süresi nedir": "Yenilenmiş telefonlarımız, satın alma tarihinden itibaren 12 ay garanti kapsamındadır. Detaylı bilgi için müşteri hizmetlerimizle iletişime geçebilirsiniz.",
+            "telefon özellikleri": "İlgilendiğiniz telefon modelinin özelliklerini öğrenmek için lütfen model adını belirtin, size detaylı bilgi sunayım.",
+            "stok durumu": "Belirli bir modelin stok durumunu öğrenmek için lütfen model adını paylaşın, mevcut durumu hemen kontrol edelim.",
+            "fiyat bilgisi": "Hangi modelin fiyatını öğrenmek istersiniz? Lütfen model adını belirtin, size güncel fiyat bilgisini ileteyim.",
+            "indirim var mı": "Şu an devam eden kampanyalarımız ve indirimlerimiz hakkında bilgi almak için lütfen 'kampanyalar' yazarak güncel fırsatları öğrenebilirsiniz.",
+            "kampanyalar": "Şu anda belirli modellerde özel indirimler ve taksit fırsatları sunuyoruz. Detaylı bilgi için web sitemizi ziyaret edebilir veya müşteri hizmetlerimizle iletişime geçebilirsiniz.",
+            "yeni gelenler": "En son eklenen yenilenmiş telefon modellerimizi görmek için web sitemizin 'Yeni Gelenler' bölümünü ziyaret edebilirsiniz.",
+            "en çok satanlar": "Müşterilerimiz arasında en popüler olan yenilenmiş telefon modellerimizi öğrenmek için web sitemizin 'En Çok Satanlar' bölümüne göz atabilirsiniz.",
+            "nasıl sipariş verebilirim": "Beğendiğiniz ürünü web sitemiz üzerinden sepete ekleyerek ve ödeme adımlarını takip ederek kolayca sipariş verebilirsiniz. Yardıma ihtiyacınız olursa, müşteri hizmetlerimiz size destek olmaktan memnuniyet duyar.",
+            "ödeme seçenekleri": "Ödeme seçeneklerimiz arasında kredi kartı, banka havalesi ve kapıda ödeme bulunmaktadır. Ayrıca, kredi kartına taksit imkânlarımız da mevcuttur.",
+            "taksit imkânı var mı": "Evet, anlaşmalı bankaların kredi kartlarına taksit imkânı sunmaktayız. Detaylı bilgi için ödeme sayfamızı inceleyebilirsiniz.",
+            "kargo ücreti ne kadar": "Belirli bir tutarın üzerindeki alışverişlerinizde kargo ücretsizdir. Güncel kargo ücretleri ve ücretsiz kargo limitleri için web sitemizi ziyaret edebilirsiniz.",
+            "kargo süresi nedir": "Siparişleriniz, ödeme onayından sonra genellikle 1-3 iş günü içinde adresinize teslim edilir. Bulunduğunuz bölgeye göre teslimat süresi değişiklik gösterebilir.",
+            "kargo takibi nasıl yaparım": "Siparişiniz kargoya verildiğinde size bir takip numarası iletilecektir. Bu numara ile kargo firmasının web sitesinden veya bizim kargo takip sayfamızdan gönderinizi izleyebilirsiniz.",
+            "siparişimi nasıl iptal edebilirim": "Siparişinizi iptal etmek için lütfen en kısa sürede müşteri hizmetlerimizle iletişime geçin. Siparişiniz kargoya verilmeden önce iptal işlemi gerçekleştirilebilir.",
+            "iade süreci nasıl işler": "Ürünü teslim aldıktan sonra 14 gün içinde iade talebinde bulunabilirsiniz. İade koşulları ve süreçleri hakkında detaylı bilgi için web sitemizin 'İade Politikası' bölümünü inceleyebilirsiniz.",
+            "iade kargo ücreti kime ait": "İade işlemlerinde kargo ücreti, iade sebebine bağlı olarak değişebilir. Detaylı bilgi için 'İade Politikası' sayfamızı ziyaret edebilirsiniz.",
+            "siparişim nerede": "Siparişinizin durumunu ve kargo takibini yapmak için lütfen sipariş numaranızı paylaşın, size yardımcı olalım.",
+            "telefonum arızalandı ne yapmalıyım": "Ürününüzle ilgili bir sorun yaşıyorsanız, lütfen müşteri hizmetlerimizle iletişime geçin. Size en yakın teknik servis noktamıza yönlendirme yaparak sorununuzu en kısa sürede çözmek için buradayız.",
+            "garanti kapsamında neler var": "Garanti kapsamı, üretim ve donanım hatalarını içerir. Kullanıcı kaynaklı hasarlar (düşme, sıvı teması vb.) garanti kapsamı dışındadır. Detaylı bilgi için garanti şartlarımızı inceleyebilirsiniz.",
+            "servis süresi ne kadar": "Servis süresi, arızanın türüne ve yoğunluğa bağlı olarak değişiklik gösterebilir. Ortalama olarak 7-14 iş günü içinde cihazınızın tamiri tamamlanmaktadır.",
+            "yedek telefon veriyor musunuz": "Servis süresince kullanmanız için yedek telefon hizmetimiz bulunmaktadır. Detaylı bilgi ve koşullar için müşteri hizmetlerimizle iletişime geçebilirsiniz.",
+            "batarya değişimi yapıyor musunuz": "Evet, batarya değişim hizmetimiz mevcuttur. Orijinal yedek parçalar kullanılarak bataryanız değiştirilir ve garantili olarak teslim edilir."
+        };
+
+        // Chatbot'u Aç/Kapat
+        function toggleChatbot() {
+            const chatbotContainer = document.getElementById("chatbot-container");
+            chatbotContainer.classList.toggle("active");
+        }
+
+        // Mesaj Gönderme Fonksiyonu
+        function sendMessage(userInput) {
+            const chatbotMessages = document.getElementById("chatbot-messages");
+
+            // Kullanıcı Mesajını Ekle
+            if (userInput) {
+                chatbotMessages.innerHTML += `
+                    <div class="message user">
+                        <div class="message-content">
+                            ${userInput}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Chatbot Yanıtını Oluştur
+            let botResponse = botResponses.default;
+            for (const key in botResponses) {
+                if (userInput.includes(key)) {
+                    botResponse = botResponses[key];
+                    break;
+                }
+            }
+
+            // Kargo Takip İsteği
+            if (userInput.includes("kargo")) {
+                document.getElementById("tracking-input").style.display = "block";
+            } else {
+                document.getElementById("tracking-input").style.display = "none";
+            }
+
+            // Yazma Animasyonu
+            chatbotMessages.innerHTML += `
+                <div class="message bot">
+                    <div class="message-content">
+                        <span class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            // Yazma Animasyonu Sonrası Yanıtı Göster
+            setTimeout(() => {
+                document.querySelector(".typing-indicator").remove();
+                chatbotMessages.innerHTML += `
+                    <div class="message bot">
+                        <div class="message-content">
+                            ${botResponse}
+                        </div>
+                    </div>
+                `;
+                // Mesajlar alanını en altına kaydır
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            }, 1500);
+
+            // Input Alanını Temizle
+            document.getElementById("user-input").value = "";
+        }
+
+        // Kargo Takip Fonksiyonu
+        function trackPackage() {
+            const trackingNumber = document.getElementById("tracking-number").value;
+            if (trackingNumber) {
+                const trackingUrl = `https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgula?code=${trackingNumber}`;
+                window.open(trackingUrl, "_blank");
+            } else {
+                alert("Lütfen geçerli bir takip numarası girin.");
+            }
+        }
+
+        // Neler Yapabilirsin Butonu
+        function showHelp() {
+            const chatbotMessages = document.getElementById("chatbot-messages");
+            const helpMessage = `
+                <div class="message bot">
+                    <div class="message-content">
+                        Size nasıl yardımcı olabilirim? İşte yapabileceğim şeyler: <br>
+                        <button class="action-button" onclick="sendMessage('telefon önerisi')">📱 Telefon Önerisi</button>
+                        <button class="action-button" onclick="sendMessage('yenilenmiş telefon nedir')">🔧 Yenilenmiş Telefon Nedir?</button>
+                        <button class="action-button" onclick="sendMessage('hangi markalar var')">🏷️ Hangi Markalar Var?</button>
+                        <button class="action-button" onclick="sendMessage('kampanyalar')">🎉 Kampanyalar</button>
+                        <button class="action-button" onclick="sendMessage('kargo takibi nasıl yaparım')">📦 Kargo Takibi</button>
+                        <button class="action-button" onclick="sendMessage('teknik destek')">🛠️ Teknik Destek</button>
+                    </div>
+                </div>
+            `;
+            chatbotMessages.innerHTML += helpMessage;
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Enter Tuşu ile Mesaj Gönderme
+        document.getElementById("user-input").addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                sendMessage(document.getElementById("user-input").value.trim().toLowerCase());
+            }
+        });
+    </script>
+</body>
+</html>
