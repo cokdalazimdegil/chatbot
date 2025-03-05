@@ -620,7 +620,7 @@
             display: none;
         }
 
-        .carousel-item {
+                .carousel-item {
             scroll-snap-align: start;
             flex: 0 0 auto;
             width: 150px;
@@ -981,7 +981,7 @@
             document.getElementById("user-input").value = "";
         }
 
-        // Kargo Takip Fonksiyonu
+                // Kargo Takip Fonksiyonu
         function trackPackage() {
             const trackingNumber = document.getElementById("tracking-number").value;
             if (trackingNumber) {
@@ -1018,6 +1018,114 @@
                 sendMessage(document.getElementById("user-input").value.trim().toLowerCase());
             }
         });
+
+        // Kullanıcının mesajını gönderme fonksiyonu
+        function sendUserMessage() {
+            const userInput = document.getElementById("user-input").value.trim().toLowerCase();
+            if (userInput) {
+                sendMessage(userInput);
+            }
+        }
+
+        // Kategorileri Gösterme Fonksiyonu
+        function showCategories() {
+            const categoriesView = document.getElementById("categories-view");
+            categoriesView.style.display = categoriesView.style.display === "block" ? "none" : "block";
+
+            // Kategorileri dinamik olarak doldurma
+            const categories = ["Telefonlar", "Tabletler", "Aksesuarlar", "Kampanyalar"];
+            const categoryList = document.getElementById("category-list");
+            categoryList.innerHTML = "";
+            categories.forEach(category => {
+                const categoryItem = document.createElement("div");
+                categoryItem.className = "category-item";
+                categoryItem.textContent = category;
+                categoryItem.addEventListener("click", () => {
+                    sendMessage(category);
+                });
+                categoryList.appendChild(categoryItem);
+            });
+        }
+
+        // Ürün Arama Fonksiyonu
+        function searchProducts() {
+            const searchView = document.getElementById("search-view");
+            searchView.style.display = searchView.style.display === "block" ? "none" : "block";
+
+            // Arama sonuçlarını dinamik olarak doldurma
+            const products = [
+                { name: "iPhone 11", price: "₺18,899", image: "https://static.ticimax.cloud/64861/uploads/urunresimleri/thumb/apple-iphone-11-128gb-c-grade-yenilenm--4096-.jpg" },
+                { name: "Samsung Galaxy S20", price: "₺4,500", image: "https://via.placeholder.com/150" },
+                { name: "Xiaomi Mi 10", price: "₺4,000", image: "https://via.placeholder.com/150" }
+            ];
+            const searchResults = document.getElementById("search-results");
+            searchResults.innerHTML = "";
+            products.forEach(product => {
+                const searchItem = document.createElement("div");
+                searchItem.className = "search-item";
+                searchItem.innerHTML = `
+                    <img src="${product.image}" alt="${product.name}">
+                    <div>${product.name}</div>
+                    <div>${product.price}</div>
+                `;
+                searchItem.addEventListener("click", () => {
+                    sendMessage(product.name);
+                });
+                searchResults.appendChild(searchItem);
+            });
+        }
+
+        // Kargo Takip Input Alanını Gösterme Fonksiyonu
+        function showTrackingInput() {
+            const trackingInput = document.getElementById("tracking-input");
+            trackingInput.style.display = trackingInput.style.display === "block" ? "none" : "block";
+        }
+
+        // Kampanyaları Gösterme Fonksiyonu
+        function showPromos() {
+            const promosMessage = `
+                <div class="message bot">
+                    <div class="message-content">
+                        Şu anda devam eden kampanyalarımız:
+                        <ul>
+                            <li>%10 indirimli iPhone 11</li>
+                            <li>%15 indirimli Samsung Galaxy S20</li>
+                            <li>%20 indirimli Xiaomi Mi 10</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            const chatbotMessages = document.getElementById("chatbot-messages");
+            chatbotMessages.innerHTML += promosMessage;
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Geri Bildirim Formunu Gösterme Fonksiyonu
+        function toggleFeedback() {
+            const feedbackContainer = document.getElementById("feedback-container");
+            feedbackContainer.style.display = feedbackContainer.style.display === "block" ? "none" : "block";
+        }
+
+        // Geri Bildirim Derecelendirme Seçimi
+        function selectRating(rating) {
+            const ratingButtons = document.querySelectorAll(".rating-button");
+            ratingButtons.forEach(button => button.classList.remove("selected"));
+            ratingButtons[rating - 1].classList.add("selected");
+        }
+
+        // Geri Bildirim Gönderme Fonksiyonu
+        function submitFeedback() {
+            const feedbackText = document.getElementById("feedback-text").value;
+            alert("Geri bildiriminiz için teşekkür ederiz!");
+            document.getElementById("feedback-text").value = "";
+            toggleFeedback();
+        }
+
+        // Mesajlar Alanını En Alta Kaydırma Fonksiyonu
+        function scrollToBottom() {
+            const chatbotMessages = document.getElementById("chatbot-messages");
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
     </script>
 </body>
 </html>
