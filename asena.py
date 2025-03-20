@@ -16,6 +16,12 @@ import keyboard
 import psutil
 import subprocess
 import logging
+import screen_brightness_control as sbc  # Ekran parlaklığı kontrolü
+import comtypes.client  # Windows ses kontrolü
+from phue import Bridge  # Philips Hue ışık kontrolü
+import subprocess
+import platform
+import wmi  # Windows yönetim arabirimi
 from colorama import Fore, Style
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -24,6 +30,7 @@ from email.mime.multipart import MIMEMultipart
 
 
 class AsenaAssistant:
+
     
     def __init__(self):
         # Bellek dosyaları
@@ -32,6 +39,9 @@ class AsenaAssistant:
         self.log_file = "asena_logs.txt"
         self.rules_file = "asena_rules.json"
         self.self_analysis_file = "asena_self_analysis.json"
+        self.system_controller = SystemController()
+        self.current_volume = 50
+        self.current_brightness = 50
         
         # Loglama yapılandırması
         logging.basicConfig(
@@ -155,7 +165,7 @@ class AsenaAssistant:
         
         # Config değişkenleri
         self.chat_mode = None
-        self.API_KEY = "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"
+        self.API_KEY = "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"
         self.OPENWEATHER_API_KEY = "b8763f13f2f55b269179e33b07aca4aa"
         self.music_playing = False
         self.music_folder = "music"
@@ -186,6 +196,134 @@ class AsenaAssistant:
         self.rules_thread = None
         self.self_awareness_thread = None
         self.hotword_thread = None
+
+
+
+    def process_text(self, text):
+        """Web arayüzünden gelen metni işle"""
+        try:
+            # Debugging için
+            print(f"İşlenen metin: {text}")
+            
+            # Ses kontrolü
+            if "ses" in text.lower():
+                if "aç" in text.lower() or "artır" in text.lower():
+                    self.current_volume = min(100, self.current_volume + 10)
+                    return f"Ses seviyesi {self.current_volume} olarak ayarlandı"
+                elif "kıs" in text.lower() or "azalt" in text.lower():
+                    self.current_volume = max(0, self.current_volume - 10)
+                    return f"Ses seviyesi {self.current_volume} olarak ayarlandı"
+            
+            # Parlaklık kontrolü
+            elif "parlaklık" in text.lower():
+                if "artır" in text.lower():
+                    self.current_brightness = min(100, self.current_brightness + 10)
+                    return f"Parlaklık {self.current_brightness} olarak ayarlandı"
+                elif "azalt" in text.lower():
+                    self.current_brightness = max(0, self.current_brightness - 10)
+                    return f"Parlaklık {self.current_brightness} olarak ayarlandı"
+            
+            # Normal konuşma işleme
+            response = self.normal_response(text)
+            if response:
+                return response
+            
+            return "Anlaşılamadı"
+            
+        except Exception as e:
+            print(f"process_text hatası: {str(e)}")
+            return f"Bir hata oluştu: {str(e)}"
+
+    def normal_response(self, text):
+        """Normal konuşma yanıtları"""
+        text = text.lower()
+        
+        # Basit yanıtlar
+        responses = {
+            "merhaba": "Merhaba! Size nasıl yardımcı olabilirim?",
+            "nasılsın": "İyiyim, teşekkür ederim. Siz nasılsınız?",
+            "teşekkür": "Rica ederim!",
+            "görüşürüz": "Görüşmek üzere!",
+            "saat kaç": datetime.datetime.now().strftime("%H:%M"),
+            "tarih": datetime.datetime.now().strftime("%d.%m.%Y")
+        }
+        
+        for key in responses:
+            if key in text:
+                return responses[key]
+        
+        return None
+
+    def get_volume(self):
+        """Mevcut ses seviyesini döndür"""
+        return self.current_volume
+        
+    def get_brightness(self):
+        """Mevcut parlaklık seviyesini döndür"""
+        return self.current_brightness
+
+    
+
+    def process_command(self, command):
+        command = command.lower()
+        
+        # Ses kontrolü komutları
+        if "ses" in command:
+            if "aç" in command or "artır" in command or "yükselt" in command:
+                self.system_controller.control_volume(action="up")
+                self.speak("Ses seviyesi artırıldı.")
+            elif "kıs" in command or "azalt" in command or "düşür" in command:
+                self.system_controller.control_volume(action="down")
+                self.speak("Ses seviyesi azaltıldı.")
+            elif "kapat" in command or "sustur" in command:
+                self.system_controller.control_volume(action="mute")
+                self.speak("Ses kapatıldı.")
+                
+        # Parlaklık kontrolü komutları
+        elif "parlaklık" in command or "ekran" in command:
+            if "artır" in command or "yükselt" in command:
+                self.system_controller.control_brightness(action="up")
+                self.speak("Ekran parlaklığı artırıldı.")
+            elif "azalt" in command or "düşür" in command:
+                self.system_controller.control_brightness(action="down")
+                self.speak("Ekran parlaklığı azaltıldı.")
+            elif "ayarla" in command:
+                # Sayısal değer varsa al
+                try:
+                    value = int(''.join(filter(str.isdigit, command)))
+                    if 0 <= value <= 100:
+                        self.system_controller.control_brightness(action="set", value=value)
+                        self.speak(f"Ekran parlaklığı {value} olarak ayarlandı.")
+                except ValueError:
+                    self.speak("Geçerli bir parlaklık değeri belirtmediniz.")
+                    
+        # Işık kontrolü komutları
+        elif "ışık" in command or "lamba" in command:
+            room = "bedroom"  # Varsayılan oda
+            if "yatak odası" in command:
+                room = "bedroom"
+            elif "salon" in command:
+                room = "living"
+            elif "mutfak" in command:
+                room = "kitchen"
+                
+            if "aç" in command or "yak" in command:
+                self.system_controller.control_room_lights(action="on", room=room)
+                self.speak(f"{room} ışıkları açıldı.")
+            elif "kapat" in command or "söndür" in command:
+                self.system_controller.control_room_lights(action="off", room=room)
+                self.speak(f"{room} ışıkları kapatıldı.")
+            elif "ayarla" in command:
+                try:
+                    value = int(''.join(filter(str.isdigit, command)))
+                    if 0 <= value <= 100:
+                        self.system_controller.control_room_lights(action="set", 
+                                                                room=room, 
+                                                                value=value)
+                        self.speak(f"{room} ışık seviyesi {value} olarak ayarlandı.")
+                except ValueError:
+                    self.speak("Geçerli bir ışık seviyesi belirtmediniz.")
+        
 
     def load_memory(self):
         """Bellek dosyalarını yükler"""
@@ -796,7 +934,6 @@ class AsenaAssistant:
             self.print_colored("Geçici bellek dosyası oluşturuldu.", Fore.GREEN)
 
 
-    
 
     
     
@@ -1011,7 +1148,7 @@ class AsenaAssistant:
             self.temporary_memory["messages"] = [system_msg] + other_msgs if system_msg else other_msgs
         
         data = {
-            "model": "google/gemini-2.0-flash-001",
+            "model": "google/gemini-2.0-pro-exp-02-05:free",
             "messages": self.temporary_memory["messages"]
         }
         
@@ -1245,6 +1382,22 @@ class AsenaAssistant:
                 self.print_colored(f"Bir hata oluştu: {e}", Fore.RED)
                 continue
 
+
+
+    def asena_function(user_input):
+        # Burada basit bir yanıt döndürüyoruz, ancak yapay zekânız daha gelişmiş olabilir.
+        if 'merhaba' in user_input.lower():
+            return "Merhaba! Size nasıl yardımcı olabilirim?"
+        elif 'nasılsın' in user_input.lower():
+            return "Ben bir yapay zekâyım, her zaman hazırım!"
+        else:
+            return "Üzgünüm, anlamadım. Başka bir şey sorabilirsiniz."
+
+
+ 
+
+
+
 class MemoryManager:
     def __init__(self, permanent_memory_file, temporary_memory_file):
         self.permanent_memory_file = permanent_memory_file
@@ -1313,7 +1466,123 @@ if __name__ == "__main__":
     memory_manager.analyze_memory_usage()
 
 
-
+class SystemController:
+    def __init__(self):
+        self.os_type = platform.system()
+        self.setup_audio()
+        self.setup_lights()
+        self.brightness_controller = sbc
+        
+    def setup_audio(self):
+        """Ses kontrolü için başlangıç ayarları"""
+        try:
+            if self.os_type == "Windows":
+                self.audio_device = comtypes.client.CreateObject("WScript.Shell")
+            else:
+                # Linux için alternatif ses kontrolü
+                import alsaaudio
+                self.audio_device = alsaaudio.Mixer()
+        except Exception as e:
+            print(f"Ses kontrolü başlatılamadı: {e}")
+    
+    def setup_lights(self):
+        """Philips Hue ışıkları için başlangıç ayarları"""
+        try:
+            # Bridge IP adresini konfigürasyon dosyasından oku
+            with open("config.json", "r") as f:
+                config = json.load(f)
+                bridge_ip = config.get("hue_bridge_ip", "192.168.1.2")
+            
+            self.bridge = Bridge(bridge_ip)
+            # İlk kullanımda bridge'e bağlanmak için butona basılması gerekir
+            self.bridge.connect()
+        except Exception as e:
+            print(f"Işık kontrolü başlatılamadı: {e}")
+    
+    def control_volume(self, action="get", value=None):
+        """Ses seviyesi kontrolü
+        
+        Args:
+            action (str): "get", "set", "up", "down", "mute"
+            value (int): 0-100 arası ses seviyesi
+        """
+        try:
+            if self.os_type == "Windows":
+                if action == "up":
+                    self.audio_device.SendKeys(chr(175)) # Volume Up
+                elif action == "down":
+                    self.audio_device.SendKeys(chr(174)) # Volume Down
+                elif action == "mute":
+                    self.audio_device.SendKeys(chr(173)) # Mute
+                elif action == "set" and value is not None:
+                    # WMI ile ses seviyesini ayarla
+                    c = wmi.WMI()
+                    vol = c.Win32_SoundDevice()[0]
+                    vol.SetVolume(value)
+                    
+            else:  # Linux için
+                if action == "get":
+                    return self.audio_device.getvolume()[0]
+                elif action == "set" and value is not None:
+                    self.audio_device.setvolume(value)
+                elif action == "mute":
+                    self.audio_device.setmute(1)
+                    
+        except Exception as e:
+            print(f"Ses kontrolü hatası: {e}")
+    
+    def control_brightness(self, action="get", value=None):
+        """Ekran parlaklığı kontrolü
+        
+        Args:
+            action (str): "get", "set", "up", "down"
+            value (int): 0-100 arası parlaklık değeri
+        """
+        try:
+            current = self.brightness_controller.get_brightness()[0]
+            
+            if action == "get":
+                return current
+            elif action == "set" and value is not None:
+                self.brightness_controller.set_brightness(value)
+            elif action == "up":
+                new_value = min(current + 10, 100)
+                self.brightness_controller.set_brightness(new_value)
+            elif action == "down":
+                new_value = max(current - 10, 0)
+                self.brightness_controller.set_brightness(new_value)
+                
+        except Exception as e:
+            print(f"Parlaklık kontrolü hatası: {e}")
+    
+    def control_room_lights(self, action="get", room="bedroom", value=None):
+        """Oda ışıklarının kontrolü
+        
+        Args:
+            action (str): "get", "set", "on", "off"
+            room (str): Oda adı
+            value (int): 0-100 arası parlaklık değeri
+        """
+        try:
+            # Odadaki tüm ışıkları al
+            lights = self.bridge.get_light_objects('name')
+            room_lights = [light for name, light in lights.items() 
+                         if room.lower() in name.lower()]
+            
+            if action == "get":
+                return [light.brightness for light in room_lights]
+            elif action == "on":
+                for light in room_lights:
+                    light.on = True
+            elif action == "off":
+                for light in room_lights:
+                    light.on = False
+            elif action == "set" and value is not None:
+                for light in room_lights:
+                    light.brightness = value
+                    
+        except Exception as e:
+            print(f"Işık kontrolü hatası: {e}")
 
 
             

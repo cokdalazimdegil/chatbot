@@ -1,0 +1,73 @@
+{
+    "user_info": {
+        "name": "istanbulda",
+        "age": 24,
+        "hometown": "Sivas",
+        "location": "İstanbul",
+        "occupation": "Bir telefon yenileme şirketinde çalışıyor",
+        "education": [],
+        "interests": [
+            "Astrofizik",
+            "Felsefe",
+            "Film izlemek",
+            "Kitap okumak",
+            "Bilim",
+            "Dinler tarihi",
+            "Resim çizmek"
+        ],
+        "goals": [
+            "Kendi işinin sahibi olmak"
+        ],
+        "language_skills": {
+            "Turkish": "Ana dili",
+            "English": "A1 seviyesi, dil pratiği yapıyor"
+        },
+        "relationship_status": "Nişanlı",
+        "fiancee": {
+            "name": "Rabia",
+            "occupation": "BESYO öğrencisi, Antrenör",
+            "hobbies": [
+                "Jimnastik eğitimi vermek",
+                "Resim çizmek"
+            ]
+        },
+        "pet": {
+            "type": "Kedi",
+            "name": "Lina"
+        },
+        "projects": [
+            {
+                "title": "Evrenin Geometrik Enteoprisi",
+                "type": "Bilimsel makale"
+            }
+        ],
+        "events": {
+            "engagement_preparations": true,
+            "wedding_month": "Ağustos 2025"
+        },
+        "job": "firmasını"
+    },
+    "contacts": {
+        "Rabia": {
+            "phone": "0546 126 35 34"
+        }
+    },
+    "reminders": [
+        {
+            "text": "Düğün",
+            "date": "2025-08-31 19:00:00",
+            "triggered": false
+        }
+    ],
+    "preferences": {
+        "communication_style": "Samimi",
+        "nickname_preference": "Dostum diye hitap edilmemesini istiyor",
+        "discussion_topics": [
+            "Felsefe",
+            "Bilim",
+            "Dinler",
+            "Film ve kitaplar"
+        ]
+    },
+    "kullanici_adi": "Ahmet"
+}
