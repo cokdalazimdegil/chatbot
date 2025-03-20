@@ -152,7 +152,7 @@ class AsenaAssistant:
         
         # Config değişkenleri
         self.chat_mode = None
-        self.API_KEY = "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"
+        self.API_KEY = "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"
         self.OPENWEATHER_API_KEY = "b8763f13f2f55b269179e33b07aca4aa"
         self.music_playing = False
         self.music_folder = "music"
@@ -382,21 +382,23 @@ class AsenaAssistant:
             self.is_sleeping = False
             self.print_colored("Asena uyandı.", Fore.YELLOW)
         
-        # Konuşmayı kesme işlevi
+        # Konuşmayı başlat
         self.engine.say(clean_text)
-        self.engine.startLoop(False)
         
+        # Konuşmayı kesme işlevi
         while self.engine.isBusy():
             try:
                 if keyboard.is_pressed('space'):
-                    self.engine.endLoop()
+                    self.engine.stop()  # Konuşmayı durdur
                     break
                 time.sleep(0.1)
             except Exception as e:
                 logging.error(f"Konuşma dinleme hatası: {e}")
                 break
         
-        self.engine.endLoop()  # Döngüyü düzgün şekilde sonlandır
+        # Artık engine.endLoop() kullanmanıza gerek yok
+        # runAndWait() işlemi tamamlanana kadar bekler, o yüzden manuel döngü sonlandırma gerekmez
+        self.engine.runAndWait()  # Bu komut, konuşmanın tamamlanmasını bekler
         
         # İstatistikleri güncelle
         response_time = time.time() - start_time
@@ -566,12 +568,12 @@ class AsenaAssistant:
         try:
             # Önce düşünme günlüğüne bir düşünce ekle
             self.add_to_thinking_log("SelfTalk", "Kullanıcıya bir şey söylemeye hazırlanıyorum...")
-            
+
             # Yapay zeka gibi düşünüyor hissi vermek için analiz yap
             now = datetime.datetime.now()
             hour = now.hour
             weekday = now.weekday()
-            
+
             # Gün ve saat bilgisine göre konuşma tipini belirle
             if hour < 9 or hour > 21:
                 talk_type = random.choice(["saat", "motivasyon", "hatırlatıcı"])
@@ -579,7 +581,7 @@ class AsenaAssistant:
                 talk_type = random.choice(["hava", "öneri", "motivasyon", "hatırlatıcı"])
             else:  # Hafta içi
                 talk_type = random.choice(["hava", "saat", "haber", "hatırlatıcı", "motivasyon", "öneri"])
-            
+
             if talk_type == "hava":
                 self.speak("Size güncel hava durumu bilgisi sunuyorum.")
                 self.get_weather()
@@ -598,17 +600,17 @@ class AsenaAssistant:
                         reminder_time = datetime.datetime.strptime(reminder["date"], "%Y-%m-%d %H:%M:%S")
                         now = datetime.datetime.now()
                         time_diff = reminder_time - now
-                        
+
                         if time_diff.days > 0:
                             time_str = f"{time_diff.days} gün sonra"
                         elif time_diff.seconds // 3600 > 0:
                             time_str = f"{time_diff.seconds // 3600} saat sonra"
                         else:
                             time_str = f"{time_diff.seconds // 60} dakika sonra"
-                        
+
                         self.speak(f"Size yaklaşan bir hatırlatma: {reminder['text']} - {time_str}.")
                     else:
-                        self.speak("Şu anda aktif bir hatırlatıcınız bulunmuyor. Yeni bir hatırlatıcı eklemek ister misiniz?")
+                        self.speak("Şu anda aktif bir hatırlatıcıyınız bulunmuyor. Yeni bir hatırlatıcı eklemek ister misiniz?")
                 else:
                     self.speak("Henüz hiç hatırlatıcı eklememişsiniz. Size bir hatırlatıcı ayarlamak için 'hatırlatıcı ekle' diyebilirsiniz.")
             elif talk_type == "motivasyon":
@@ -629,6 +631,9 @@ class AsenaAssistant:
                     "Telefon bildirimlerini kapatmak, dikkat dağınıklığını azaltır."
                 ]
                 self.speak(random.choice(productivity_tips))
+
+        except Exception as e:
+            print(f"Hata oluştu: {e}")
     
     def check_reminders(self):
         """Hatırlatıcıları sürekli kontrol eden thread"""
@@ -656,8 +661,8 @@ class AsenaAssistant:
                         continue  # Geçersiz tarihli hatırlatıcıyı atla
             
                 # Tetiklenen hatırlatıcıları güncel olarak işaretle
-                if triggered_reminders:
-                    self.save_permanent_memory()
+                    if triggered_reminders:
+                        self.save_permanent_memory()
         
             time.sleep(10)  # Her 10 saniyede bir kontrol et
 
